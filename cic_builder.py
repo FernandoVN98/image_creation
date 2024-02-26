@@ -17,7 +17,7 @@ builder = ImageBuilder(configuration.repositories_cfg, configuration.build_cfg, 
 def image_path (name):
     return builder.get_filename(name)
 
-def build_image (workflow_name, step_id, version, machine, force, push, path):
+def build_image (workflow_name, step_id, version, machine, force, push, path, yaml_read):
     try:
         if machine['container_engine'] == 'singularity':
             singularity = True
@@ -39,7 +39,7 @@ def build_image (workflow_name, step_id, version, machine, force, push, path):
         logger.addHandler(logging.StreamHandler(sys.stdout))
         logger.setLevel(logging.INFO)
         builder._check_and_build(build_id, image_id, workflow, machine,
-                              singularity, force, push, tmp_folder, logger, None, None, path)
+                              singularity, force, push, tmp_folder, logger, None, None, path, yaml_read)
     except Exception as e:
         print(traceback.format_exc())
         raise e
@@ -52,8 +52,9 @@ def read_json_and_build(content):
     workflow = content['workflow']
     step_id = content['step_id']
     path = content.get('path', None)
+    yaml_read = content.get('workflow_yaml', 'eflows4hpc.yaml')
     version = content.get('version', 'latest')
-    build_image(workflow, step_id, version, machine, force, push, path)
+    build_image(workflow, step_id, version, machine, force, push, path, yaml_read)
 
 if __name__ == '__main__':
     argParser = argparse.ArgumentParser()
