@@ -182,7 +182,7 @@ def update_password():
 def image_path (name):
     return builder.get_filename(name)
 
-def build_image (workflow_name, step_id, version, machine, force, push, user):
+def build_image (workflow_name, step_id, version, machine, force, push, user, yaml_read):
     try:
         if machine['container_engine'] == 'singularity':
             singularity = True
@@ -215,7 +215,7 @@ def build_image (workflow_name, step_id, version, machine, force, push, user):
             user.builds.append(build)
             db.session.commit()
             builder.request_build(build_id, image_id, workflow, machine,
-                              singularity, force, _update_build, _update_image)
+                              singularity, force, _update_build, _update_image, yaml_read)
         else:
             # If there is an image check if it is currently building it
             build = check_image_currently_build(image_id)
@@ -240,7 +240,7 @@ def build_image (workflow_name, step_id, version, machine, force, push, user):
                 user.builds.append(build)
                 db.session.commit()
                 builder.request_build(build_id, image_id, workflow, machine,
-                                  singularity, force, _update_build, _update_image)
+                                  singularity, force, _update_build, _update_image, yaml_read)
         return build_id
     except Exception as e:
         print(traceback.format_exc())

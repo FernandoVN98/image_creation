@@ -88,12 +88,12 @@ class ImageBuilder:
         else:
             return "buildx"
 
-    def _update_configuration(self, workflow_folder_path, machine):
+    def _update_configuration(self, workflow_folder_path, machine, yaml_read):
         debs = None
         pips = None
         environment = {}
         import yaml
-        with open(os.path.join(workflow_folder_path, "eflows4hpc.yaml"), 'r') as file:
+        with open(os.path.join(workflow_folder_path, yaml_read), 'r') as file:
             eflows_environment = yaml.full_load(file)
         if 'apt' in eflows_environment:
             debs = eflows_environment['apt']
@@ -135,11 +135,11 @@ class ImageBuilder:
             yaml.dump(environment, file, default_flow_style=False)
         return debs, pips
 
-    def _generate_build_environment(self, logger, tmp_folder, workflow, machine, path):
+    def _generate_build_environment(self, logger, tmp_folder, workflow, machine, path, yaml_read):
         
         workflow_folder_path = self._get_workflow_version(
             logger, tmp_folder, workflow, path)
-        debs, pips = self._update_configuration(workflow_folder_path, machine)
+        debs, pips = self._update_configuration(workflow_folder_path, machine, yaml_read)
         software_repo_path = os.path.join(
             tmp_folder, os.path.basename(self.software_repository))
         shutil.copytree(self.software_repository, software_repo_path)
@@ -167,9 +167,9 @@ class ImageBuilder:
             return workflow_folder_path
     
 
-    def _build_image_and_push(self, logger, tmp_folder, workflow, image_id, machine, force, push, path):
+    def _build_image_and_push(self, logger, tmp_folder, workflow, image_id, machine, force, push, path, yaml_read):
 
-        self._generate_build_environment(logger, tmp_folder, workflow, machine, path)
+        self._generate_build_environment(logger, tmp_folder, workflow, machine, path, yaml_read)
         logger.info("Generating run command")
 
         build_command = self._get_builder(machine)
@@ -252,7 +252,7 @@ class ImageBuilder:
         logger.addHandler(file_handler)
         return logger
 
-    def _check_and_build(self, build_id, image_id, workflow, machine, singularity, force, push, tmp_folder, logger, update_build_func, update_image_func, path):
+    def _check_and_build(self, build_id, image_id, workflow, machine, singularity, force, push, tmp_folder, logger, update_build_func, update_image_func, path, yaml_read):
         start_t = time.time()
         if update_build_func:
             update_build_func(id=build_id, status=STARTED)
@@ -296,7 +296,7 @@ class ImageBuilder:
                 else:
                     logger.info("IB: Building Image " + str(image_id))
                     self._build_image_and_push(
-                        logger, tmp_folder, workflow, image_id, machine, force, push, path)
+                        logger, tmp_folder, workflow, image_id, machine, force, push, path, yaml_read)
                 built = True
             else:
                 built = False
@@ -329,12 +329,12 @@ class ImageBuilder:
         end_t = time.time()
         logger.info("IB: Elaspsed time " + str(end_t-start_t) + " seconds.")
 
-    def request_build(self, build_id, image_id, workflow, machine, singularity, force, update_build_func, update_image_func, push=True):
+    def request_build(self, build_id, image_id, workflow, machine, singularity, force, update_build_func, update_image_func, yaml_read, push=True):
         tmp_folder = self._get_build_folder(build_id)
         os.makedirs(tmp_folder)
         logger = self._gen_logger(build_id)
         self.executor.submit(self._check_and_build, build_id, image_id, workflow,
-                             machine, singularity, force, push, tmp_folder, logger, update_build_func, update_image_func, None)
+                             machine, singularity, force, push, tmp_folder, logger, update_build_func, update_image_func, None, yaml_read)
 
     def get_filename(self, filename):
         if filename is None:
