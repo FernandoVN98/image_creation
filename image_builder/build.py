@@ -63,6 +63,8 @@ class ImageBuilder:
             builder_cfg["builder_home"], "files", "run_build.sh")
         self.get_workflow_script = os.path.join(
             builder_cfg["builder_home"], "files", "get_workflow.sh")
+        self.spack_build_script = os.path.join(
+            builder_cfg["builder_home"], "files", "build_spack.sh")
         self.singularity_sudo = builder_cfg['singularity_sudo']
 
     def _update_dockerfile(self, tmp_folder, step_id, machine, debs, pips):
@@ -91,6 +93,7 @@ class ImageBuilder:
     def _update_configuration(self, workflow_folder_path, machine, yaml_read):
         debs = None
         pips = None
+        pip_reqs_path = os.path.join(workflow_folder_path, "requirements.txt")
         environment = {}
         import yaml
         with open(os.path.join(workflow_folder_path, yaml_read), 'r') as file:
@@ -99,6 +102,8 @@ class ImageBuilder:
             debs = eflows_environment['apt']
         if 'pip' in eflows_environment:
             pips = eflows_environment['pip']
+        elif os.path.exists(pip_reqs_path): 
+            pips = ["-r", pip_reqs_path]
         if 'spack' in eflows_environment:
             environment['spack'] = eflows_environment['spack']
             if 'architecture' in machine:
@@ -128,11 +133,8 @@ class ImageBuilder:
             environment['spack']['config'] = {
                 'shared_linking': {'type': 'runpath'}}
             environment['spack']['view'] = "/opt/view"
-        else:
-            raise Exception(
-                "Incorrect spack environment. Not containing the spack tag.")
-        with open(os.path.join(workflow_folder_path, "spack.yaml"), 'w') as file:
-            yaml.dump(environment, file, default_flow_style=False)
+            with open(os.path.join(workflow_folder_path, "spack.yaml"), 'w') as file:
+                yaml.dump(environment, file, default_flow_style=False)
         return debs, pips
 
     def _generate_build_environment(self, logger, tmp_folder, workflow, machine, path, yaml_read):
@@ -142,6 +144,7 @@ class ImageBuilder:
         debs, pips = self._update_configuration(workflow_folder_path, machine, yaml_read)
         software_repo_path = os.path.join(
             tmp_folder, os.path.basename(self.software_repository))
+        shutil.copy2(self.spack_build_script, tmp_folder)
         shutil.copytree(self.software_repository, software_repo_path)
         spack_cfg_path = os.path.join(tmp_folder, ".spack")
         shutil.copytree(self.spack_cfg, spack_cfg_path)
